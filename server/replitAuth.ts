@@ -3,6 +3,7 @@ import type { Express, RequestHandler } from "express";
 import MemoryStore from "memorystore";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
+import User from "./db/users";
 
 const MemStoreSession = MemoryStore(session);
 
@@ -17,7 +18,7 @@ export function getSession() {
   const sessionStore = new MemStoreSession({
     checkPeriod: sessionTtl,
   });
-  
+
   return session({
     secret: process.env.SESSION_SECRET || "your-secret-key-here",
     store: sessionStore,
@@ -38,12 +39,12 @@ export async function setupAuth(app: Express) {
   app.post("/api/login", async (req, res) => {
     try {
       const { email, password } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
-      const user = await storage.getUserByEmail(email);
+      const user = await User.findOne({ email });
       if (!user) {
         return res.status(401).json({ message: 'Invalid email or password' });
       }
@@ -55,7 +56,7 @@ export async function setupAuth(app: Express) {
 
       // Set user session
       req.session.userId = user.id;
-      
+
       res.json({ user, message: 'Login successful' });
     } catch (error) {
       console.error('Login error:', error);
@@ -67,13 +68,13 @@ export async function setupAuth(app: Express) {
   app.post("/api/register", async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
-      
+
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
+      const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({ message: 'User already exists' });
       }
@@ -82,16 +83,15 @@ export async function setupAuth(app: Express) {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Create user
-      const user = await storage.createUser({
+      const user = new User({
         email,
         password: hashedPassword,
-        firstName: firstName || '',
-        lastName: lastName || '',
+        fullName: `${firstName || '' } ${lastName || ''}`,
       });
-
+      await user.save();
       // Set user session
       req.session.userId = user.id;
-      
+
       res.status(201).json({ user, message: 'Registration successful' });
     } catch (error) {
       console.error('Registration error:', error);
