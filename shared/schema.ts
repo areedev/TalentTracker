@@ -46,8 +46,11 @@ export const loginUserSchema = z.object({
   password: z.string().min(6),
 });
 
-export const registerUserSchema = insertUserSchema.extend({
+export const registerUserSchema = z.object({
+  email: z.string().email(),
   password: z.string().min(6),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
 });
 
 export type UpsertUser = typeof users.$inferInsert;

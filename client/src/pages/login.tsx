@@ -32,6 +32,7 @@ export default function Login() {
       firstName: "",
       lastName: "",
     },
+    mode: "onChange",
   });
 
   const loginMutation = useMutation({
@@ -165,7 +166,13 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="First name" {...field} />
+                            <Input 
+                              placeholder="First name" 
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -178,7 +185,13 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="Last name" {...field} />
+                            <Input 
+                              placeholder="Last name" 
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -198,7 +211,10 @@ export default function Login() {
                               type="email"
                               placeholder="Enter your email"
                               className="pl-10"
-                              {...field}
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
                             />
                           </div>
                         </FormControl>
@@ -219,7 +235,10 @@ export default function Login() {
                               type="password"
                               placeholder="Enter your password (min 6 characters)"
                               className="pl-10"
-                              {...field}
+                              value={field.value || ''}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              name={field.name}
                             />
                           </div>
                         </FormControl>
