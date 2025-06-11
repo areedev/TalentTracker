@@ -4,17 +4,21 @@ import {
   settings,
   type User,
   type UpsertUser,
+  type InsertUser,
   type Talent,
   type InsertTalent,
   type UpdateTalent,
   type Settings,
   type InsertSettings,
 } from "@shared/schema";
+import { v4 as uuidv4 } from 'uuid';
 
 // Interface for storage operations
 export interface IStorage {
-  // User operations (IMPORTANT) these user operations are mandatory for Replit Auth.
+  // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Talent operations
@@ -44,10 +48,31 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    const user: User = {
+      ...userData,
+      id: uuidv4(),
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(user.id, user);
+    return user;
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     const existingUser = this.users.get(userData.id);
     const user: User = {
       ...userData,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -76,6 +101,13 @@ export class MemStorage implements IStorage {
     const talent: Talent = {
       ...talentData,
       id: this.currentTalentId++,
+      email: talentData.email || null,
+      talentUrl: talentData.talentUrl || null,
+      nationality: talentData.nationality || null,
+      location: talentData.location || null,
+      externalLinks: Array.isArray(talentData.externalLinks) ? talentData.externalLinks : null,
+      note: talentData.note || null,
+      important: talentData.important || null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -90,6 +122,13 @@ export class MemStorage implements IStorage {
     const updated: Talent = {
       ...existing,
       ...talentData,
+      email: talentData.email !== undefined ? talentData.email || null : existing.email,
+      talentUrl: talentData.talentUrl !== undefined ? talentData.talentUrl || null : existing.talentUrl,
+      nationality: talentData.nationality !== undefined ? talentData.nationality || null : existing.nationality,
+      location: talentData.location !== undefined ? talentData.location || null : existing.location,
+      externalLinks: talentData.externalLinks !== undefined ? (Array.isArray(talentData.externalLinks) ? talentData.externalLinks : null) : existing.externalLinks,
+      note: talentData.note !== undefined ? talentData.note || null : existing.note,
+      important: talentData.important !== undefined ? talentData.important || null : existing.important,
       updatedAt: new Date(),
     };
     this.talents.set(id, updated);
@@ -123,6 +162,15 @@ export class MemStorage implements IStorage {
     const settings: Settings = {
       ...settingsData,
       id: this.settings?.id || this.currentSettingsId++,
+      smtpHost: settingsData.smtpHost || null,
+      smtpPort: settingsData.smtpPort || null,
+      smtpUsername: settingsData.smtpUsername || null,
+      smtpPassword: settingsData.smtpPassword || null,
+      smtpSecure: settingsData.smtpSecure || null,
+      emailSubject: settingsData.emailSubject || null,
+      emailTemplate: settingsData.emailTemplate || null,
+      fromName: settingsData.fromName || null,
+      fromEmail: settingsData.fromEmail || null,
       createdAt: this.settings?.createdAt || new Date(),
       updatedAt: new Date(),
     };
