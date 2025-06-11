@@ -36,16 +36,7 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Login failed");
-      }
+      const response = await apiRequest("POST", "/api/login", data);
       return response.json();
     },
     onSuccess: () => {
@@ -67,16 +58,7 @@ export default function Login() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Registration failed");
-      }
+      const response = await apiRequest("POST", "/api/register", data);
       return response.json();
     },
     onSuccess: () => {

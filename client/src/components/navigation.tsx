@@ -1,16 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Settings, LogOut, Users } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Navigation() {
   const [location] = useLocation();
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include",
-      });
+      await apiRequest("POST", "/api/logout");
       window.location.reload();
     } catch (error) {
       console.error("Logout error:", error);

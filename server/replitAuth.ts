@@ -1,5 +1,3 @@
-import passport from "passport";
-import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import MemoryStore from "memorystore";
@@ -7,6 +5,12 @@ import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
 const MemStoreSession = MemoryStore(session);
+
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+  }
+}
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -29,47 +33,34 @@ export function getSession() {
 
 export async function setupAuth(app: Express) {
   app.use(getSession());
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  // Local Strategy for email/password authentication
-  passport.use(new LocalStrategy(
-    {
-      usernameField: 'email',
-      passwordField: 'password'
-    },
-    async (email: string, password: string, done) => {
-      try {
-        const user = await storage.getUserByEmail(email);
-        if (!user) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        const isValidPassword = await bcrypt.compare(password, user.password || '');
-        if (!isValidPassword) {
-          return done(null, false, { message: 'Invalid email or password' });
-        }
-
-        return done(null, user);
-      } catch (error) {
-        return done(error);
-      }
-    }
-  ));
-
-  passport.serializeUser((user: any, cb) => cb(null, user.id));
-  passport.deserializeUser(async (id: string, cb) => {
-    try {
-      const user = await storage.getUser(id);
-      cb(null, user);
-    } catch (error) {
-      cb(error);
-    }
-  });
 
   // Login route
-  app.post("/api/login", passport.authenticate('local'), (req, res) => {
-    res.json({ user: req.user, message: 'Login successful' });
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password || '');
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Set user session
+      req.session.userId = user.id;
+      
+      res.json({ user, message: 'Login successful' });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
   });
 
   // Register route
@@ -98,13 +89,10 @@ export async function setupAuth(app: Express) {
         lastName: lastName || '',
       });
 
-      // Log the user in
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: 'Error logging in user' });
-        }
-        res.status(201).json({ user, message: 'Registration successful' });
-      });
+      // Set user session
+      req.session.userId = user.id;
+      
+      res.status(201).json({ user, message: 'Registration successful' });
     } catch (error) {
       console.error('Registration error:', error);
       res.status(500).json({ message: 'Internal server error' });
@@ -113,7 +101,7 @@ export async function setupAuth(app: Express) {
 
   // Logout route
   app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
+    req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: 'Error logging out' });
       }
@@ -122,9 +110,17 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = (req, res, next) => {
-  if (req.isAuthenticated()) {
-    return next();
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (req.session.userId) {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (user) {
+        (req as any).user = user;
+        return next();
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+    }
   }
   res.status(401).json({ message: "Unauthorized" });
 };
