@@ -188,7 +188,8 @@ export default function Login() {
                   <FormField
                     control={registerForm.control}
                     name="email"
-                    render={({ field }) => (
+                    render={({ field }) => {
+                      return (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
@@ -204,7 +205,7 @@ export default function Login() {
                         </FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}
+                    )}}
                   />
                   <FormField
                     control={registerForm.control}

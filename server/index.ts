@@ -1,6 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
+mongoose.connect(process.env.DATABASE_URL!, {}).then(() => {
+  console.log('Mongodb connected...')
+});
 
 const app = express();
 app.use(express.json());
