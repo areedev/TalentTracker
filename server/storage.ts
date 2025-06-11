@@ -43,6 +43,90 @@ export class MemStorage implements IStorage {
   private currentTalentId = 1;
   private currentSettingsId = 1;
 
+  constructor() {
+    // Add sample talent data
+    this.initializeSampleData();
+  }
+
+  private async initializeSampleData() {
+    const sampleTalents = [
+      {
+        talentId: "talent-001",
+        talentUrl: "https://example.com/john-doe",
+        fullName: "John Doe",
+        nationality: "American",
+        location: "New York, NY",
+        externalLinks: [
+          { name: "LinkedIn", url: "https://linkedin.com/in/johndoe" },
+          { name: "GitHub", url: "https://github.com/johndoe" },
+        ],
+        email: "",
+        note: "",
+        important: false,
+      },
+      {
+        talentId: "talent-002",
+        talentUrl: "https://example.com/jane-smith",
+        fullName: "Jane Smith",
+        nationality: "Canadian",
+        location: "Toronto, ON",
+        externalLinks: [
+          { name: "LinkedIn", url: "https://linkedin.com/in/janesmith" },
+          { name: "Portfolio", url: "https://janesmith.dev" },
+        ],
+        email: "",
+        note: "",
+        important: false,
+      },
+      {
+        talentId: "talent-003",
+        talentUrl: "https://example.com/alex-chen",
+        fullName: "Alex Chen",
+        nationality: "Chinese",
+        location: "Shanghai, China",
+        externalLinks: [
+          { name: "LinkedIn", url: "https://linkedin.com/in/alexchen" },
+          { name: "Twitter", url: "https://twitter.com/alexchen" },
+        ],
+        email: "",
+        note: "",
+        important: false,
+      },
+      {
+        talentId: "talent-004",
+        talentUrl: "https://example.com/maria-garcia",
+        fullName: "Maria Garcia",
+        nationality: "Spanish",
+        location: "Madrid, Spain",
+        externalLinks: [
+          { name: "LinkedIn", url: "https://linkedin.com/in/mariagarcia" },
+          { name: "Behance", url: "https://behance.net/mariagarcia" },
+        ],
+        email: "",
+        note: "",
+        important: false,
+      },
+      {
+        talentId: "talent-005",
+        talentUrl: "https://example.com/david-kim",
+        fullName: "David Kim",
+        nationality: "South Korean",
+        location: "Seoul, South Korea",
+        externalLinks: [
+          { name: "LinkedIn", url: "https://linkedin.com/in/davidkim" },
+          { name: "GitHub", url: "https://github.com/davidkim" },
+        ],
+        email: "",
+        note: "",
+        important: false,
+      },
+    ];
+
+    for (const talentData of sampleTalents) {
+      await this.createTalent(talentData);
+    }
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
@@ -105,7 +189,7 @@ export class MemStorage implements IStorage {
       talentUrl: talentData.talentUrl || null,
       nationality: talentData.nationality || null,
       location: talentData.location || null,
-      externalLinks: Array.isArray(talentData.externalLinks) ? talentData.externalLinks : null,
+      externalLinks: talentData.externalLinks ? [...talentData.externalLinks] : null,
       note: talentData.note || null,
       important: talentData.important || null,
       createdAt: new Date(),
@@ -126,7 +210,7 @@ export class MemStorage implements IStorage {
       talentUrl: talentData.talentUrl !== undefined ? talentData.talentUrl || null : existing.talentUrl,
       nationality: talentData.nationality !== undefined ? talentData.nationality || null : existing.nationality,
       location: talentData.location !== undefined ? talentData.location || null : existing.location,
-      externalLinks: talentData.externalLinks !== undefined ? (Array.isArray(talentData.externalLinks) ? talentData.externalLinks : null) : existing.externalLinks,
+      externalLinks: talentData.externalLinks !== undefined ? (talentData.externalLinks ? [...talentData.externalLinks] : null) : existing.externalLinks,
       note: talentData.note !== undefined ? talentData.note || null : existing.note,
       important: talentData.important !== undefined ? talentData.important || null : existing.important,
       updatedAt: new Date(),

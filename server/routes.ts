@@ -13,9 +13,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      res.json(req.user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -142,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create nodemailer transporter
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: settings.smtpHost,
         port: parseInt(settings.smtpPort || "587"),
         secure: settings.smtpSecure || false,
