@@ -34,86 +34,12 @@ export function getSession() {
 
 export async function setupAuth(app: Express) {
   app.use(getSession());
-
-  // Login route
-  app.post("/api/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
-      }
-
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
-
-      const isValidPassword = await bcrypt.compare(password, user.password || '');
-      if (!isValidPassword) {
-        return res.status(401).json({ message: 'Invalid email or password' });
-      }
-
-      // Set user session
-      req.session.userId = user.id;
-
-      res.json({ user, message: 'Login successful' });
-    } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-
-  // Register route
-  app.post("/api/register", async (req, res) => {
-    try {
-      const { email, password, firstName, lastName } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
-      }
-
-      // Check if user already exists
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        return res.status(400).json({ message: 'User already exists' });
-      }
-
-      // Hash password
-      const hashedPassword = await bcrypt.hash(password, 10);
-
-      // Create user
-      const user = new User({
-        email,
-        password: hashedPassword,
-        fullName: `${firstName || '' } ${lastName || ''}`,
-      });
-      await user.save();
-      // Set user session
-      req.session.userId = user.id;
-
-      res.status(201).json({ user, message: 'Registration successful' });
-    } catch (error) {
-      console.error('Registration error:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  });
-
-  // Logout route
-  app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error logging out' });
-      }
-      res.json({ message: 'Logout successful' });
-    });
-  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   if (req.session.userId) {
     try {
-      const user = await storage.getUser(req.session.userId);
+      const user = await User.findById(req.session.userId);
       if (user) {
         (req as any).user = user;
         return next();

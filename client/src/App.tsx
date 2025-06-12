@@ -23,19 +23,21 @@ function Router() {
   }
 
   return (
-    <Switch>
-      {!isAuthenticated ? (
-        <Route path="/" component={Login} />
-      ) : (
-        <>
-          <Navigation />
-          <Route path="/" component={Home} />
-          <Route path="/settings" component={Settings} />
-          <Route path="/talents/:talentId" component={PublicProfile} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <div>
+      <Navigation />
+      <Switch>
+        {!isAuthenticated ? (
+          <Route path="/" component={Login} />
+        ) : (
+          <>
+            <Route path="/" component={Home} />
+            <Route path="/settings" component={Settings} />
+            <Route path="/talents/:talentId" component={PublicProfile} />
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
+    </div>
   );
 }
 

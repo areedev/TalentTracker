@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import TalentCard from "@/components/talent-card";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,66 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Talent } from "@shared/schema";
 
 export default function Home() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const limit = 100;
+  const searchParams = new URLSearchParams(window.location.search);
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = parseInt(searchParams.get("limit") || "100", 10);
+  const [currentPage, setCurrentPage] = useState(page);
 
   const { data, isLoading, error } = useQuery<{ talents: Talent[]; total: number }>({
     queryKey: [`/api/talents?page=${currentPage}&limit=${limit}`],
   });
 
   const totalPages = data ? Math.ceil(data.total / limit) : 0;
+
+  useEffect(() => {
+    window.history.pushState(null, "", `?page=${currentPage}&limit=${limit}`);
+  }, [currentPage]);
+
+  const Pagination = () => {
+    return (<nav className="flex items-center space-x-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
+      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+        let pageNum;
+        if (totalPages <= 5) {
+          pageNum = i + 1;
+        } else if (currentPage <= 3) {
+          pageNum = i + 1;
+        } else if (currentPage >= totalPages - 2) {
+          pageNum = totalPages - 4 + i;
+        } else {
+          pageNum = currentPage - 2 + i;
+        }
+
+        return (
+          <Button
+            key={pageNum}
+            variant={currentPage === pageNum ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrentPage(pageNum)}
+          >
+            {pageNum}
+          </Button>
+        );
+      })}
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </nav>)
+  }
 
   if (isLoading) {
     return (
@@ -59,6 +111,11 @@ export default function Home() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6 flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-900">Talent Directory</h2>
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination />
+          </div>
+        )}
         <div className="text-sm text-slate-600">
           Showing {startIndex}-{endIndex} of {data.total} talents
         </div>
@@ -66,55 +123,13 @@ export default function Home() {
 
       <div className="space-y-6">
         {data.talents.map((talent) => (
-          <TalentCard key={talent.id} talent={talent} />
+          <TalentCard key={talent.talentId} talent={talent} />
         ))}
       </div>
 
       {totalPages > 1 && (
         <div className="mt-8 flex justify-center">
-          <nav className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            
-            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let pageNum;
-              if (totalPages <= 5) {
-                pageNum = i + 1;
-              } else if (currentPage <= 3) {
-                pageNum = i + 1;
-              } else if (currentPage >= totalPages - 2) {
-                pageNum = totalPages - 4 + i;
-              } else {
-                pageNum = currentPage - 2 + i;
-              }
-              
-              return (
-                <Button
-                  key={pageNum}
-                  variant={currentPage === pageNum ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </nav>
+          <Pagination />
         </div>
       )}
     </div>

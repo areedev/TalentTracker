@@ -102,7 +102,7 @@ export default function Login() {
           </CardHeader>
           <CardContent className="pt-0">
             {!isRegistering ? (
-              <Form {...loginForm}>
+              <Form {...loginForm} key="login">
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
@@ -156,7 +156,7 @@ export default function Login() {
                 </form>
               </Form>
             ) : (
-              <Form {...registerForm}>
+              <Form {...registerForm} key="register" >
                 <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -166,8 +166,8 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>First Name</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="First name" 
+                            <Input
+                              placeholder="First name"
                               value={field.value || ''}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -185,8 +185,8 @@ export default function Login() {
                         <FormItem>
                           <FormLabel>Last Name</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Last name" 
+                            <Input
+                              placeholder="Last name"
                               value={field.value || ''}
                               onChange={field.onChange}
                               onBlur={field.onBlur}
@@ -201,8 +201,7 @@ export default function Login() {
                   <FormField
                     control={registerForm.control}
                     name="email"
-                    render={({ field }) => {
-                      return (
+                    render={({ field }) => (
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
@@ -212,16 +211,13 @@ export default function Login() {
                               type="email"
                               placeholder="Enter your email"
                               className="pl-10"
-                              value={field.value || ''}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
+                              {...field} // ✅ Use this instead of manual value/onChange binding
                             />
                           </div>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
-                    )}}
+                    )}
                   />
                   <FormField
                     control={registerForm.control}

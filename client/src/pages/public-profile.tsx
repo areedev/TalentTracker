@@ -24,7 +24,7 @@ export default function PublicProfile() {
   });
 
   const { data: navigation } = useQuery<{ previous?: Talent; next?: Talent }>({
-    queryKey: [`/api/talents/${talent?.id}/navigation`],
+    queryKey: [`/api/talents/${talent?.talentId}/navigation`],
     enabled: !!talent?.id,
   });
 

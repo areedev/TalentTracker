@@ -14,6 +14,9 @@ export interface TalentDocument extends Document {
   nationality: string;
   location?: string;
   externalLinks: ExternalLink[];
+  email?: string;
+  note?: string;
+  important?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -26,6 +29,9 @@ const TalentSchema: Schema<TalentDocument> = new Schema(
     fullName: { type: String, required: true },
     nationality: { type: String, required: true },
     location: { type: String },
+    email: { type: String },
+    note: { type: String },
+    important: { type: Boolean },
     externalLinks: [
       {
         name: { type: String },

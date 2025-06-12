@@ -5,10 +5,86 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { insertTalentSchema, updateTalentSchema, insertSettingsSchema } from "@shared/schema";
 import { z } from "zod";
 import nodemailer from "nodemailer";
+import User from "./db/users";
+import Talent from "./db/talents";
+import bcrypt from "bcryptjs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password || '');
+      if (!isValidPassword) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+
+      // Set user session
+      req.session.userId = user.id;
+
+      res.json({ user, message: 'Login successful' });
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Register route
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Check if user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ message: 'User already exists' });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = new User({
+        email,
+        password: hashedPassword,
+        fullName: `${firstName || ''} ${lastName || ''}`,
+      });
+      await user.save();
+      // Set user session
+      req.session.userId = user.id;
+
+      res.status(201).json({ user, message: 'Registration successful' });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Logout route
+  app.post("/api/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error logging out' });
+      }
+      res.json({ message: 'Logout successful' });
+    });
+  });
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -25,8 +101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
-      const result = await storage.getTalents(page, limit);
-      res.json(result);
+      const total = await Talent.countDocuments();
+      const talents = await Talent.find().skip((page - 1) * limit).limit(limit);
+
+      res.json({ talents, total });
     } catch (error) {
       console.error("Error fetching talents:", error);
       res.status(500).json({ message: "Failed to fetch talents" });
@@ -50,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/talents/by-talent-id/:talentId', async (req, res) => {
     try {
       const talentId = req.params.talentId;
-      const talent = await storage.getTalentByTalentId(talentId);
+      const talent = await Talent.findOne({ talentId });
       if (!talent) {
         return res.status(404).json({ message: "Talent not found" });
       }
@@ -91,13 +169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/talents/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const talentData = updateTalentSchema.parse(req.body);
-      const talent = await storage.updateTalent(id, talentData);
-      if (!talent) {
-        return res.status(404).json({ message: "Talent not found" });
-      }
-      res.json(talent);
+      const talentId = parseInt(req.params.id);
+      const { email, important, note } = req.body;
+      console.log(email)
+      const updated = await Talent.updateOne({ talentId }, { email, important, note });
+
+      res.json({ success: true, updated });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid talent data", errors: error.errors });
@@ -109,8 +186,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/talents/:id', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const success = await storage.deleteTalent(id);
+      const talentId = parseInt(req.params.id);
+      const success = await Talent.deleteOne({ talentId });
       if (!success) {
         return res.status(404).json({ message: "Talent not found" });
       }

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Flag, MapPin, ExternalLink, Mail, Save } from "lucide-react";
+import { Flag, MapPin, ExternalLink, Mail, Save, Delete, Trash } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -33,7 +33,7 @@ export default function TalentCard({ talent }: TalentCardProps) {
 
   const updateTalentMutation = useMutation({
     mutationFn: async (data: any) => {
-      await apiRequest("PATCH", `/api/talents/${talent.id}`, data);
+      await apiRequest("PATCH", `/api/talents/${talent.talentId}`, data);
     },
     onSuccess: () => {
       toast({
@@ -70,6 +70,27 @@ export default function TalentCard({ talent }: TalentCardProps) {
     },
   });
 
+  const deleteTalentMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("DELETE", `/api/talents/${talent.talentId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Talent deleted",
+        description: "The talent has been removed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/talents"] });
+      // Optional: redirect or remove card from UI
+    },
+    onError: (error) => {
+      toast({
+        title: "Error deleting talent",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSave = () => {
     updateTalentMutation.mutate({
       email: email || null,
@@ -77,6 +98,12 @@ export default function TalentCard({ talent }: TalentCardProps) {
       important,
     });
   };
+
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this talent?")) {
+      deleteTalentMutation.mutate();
+    }
+  }
 
   const handleSendEmail = () => {
     if (!email) {
@@ -91,10 +118,13 @@ export default function TalentCard({ talent }: TalentCardProps) {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+    <div
+      className={`rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow ${talent.email ? "bg-green-50" : "bg-white"
+        }`}
+    >
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-slate-900">{talent.fullName}</h3>
+          <h3 className="text-lg font-semibold text-slate-900" id={talent.talentId}>{talent.fullName}</h3>
           <div className="flex items-center space-x-4 mt-2 text-sm text-slate-600">
             {talent.nationality && (
               <span className="flex items-center">
@@ -201,6 +231,16 @@ export default function TalentCard({ talent }: TalentCardProps) {
           >
             <Save className="mr-2" size={14} />
             {updateTalentMutation.isPending ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteTalentMutation.isPending}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Trash className="mr-2" size={14} />
+            {deleteTalentMutation.isPending ? "Deleting..." : "Delete"}
           </Button>
         </div>
       </div>
