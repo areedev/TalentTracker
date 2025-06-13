@@ -7,6 +7,7 @@ import { z } from "zod";
 import nodemailer from "nodemailer";
 import User from "./db/users";
 import Talent from "./db/talents";
+import Setting from "./db/settings";
 import bcrypt from "bcryptjs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -101,8 +102,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 100;
-      const total = await Talent.countDocuments();
-      const talents = await Talent.find().skip((page - 1) * limit).limit(limit);
+      const keyword = req.query.keyword || '';
+      const emailOnly = req.query.emailOnly === "true";
+
+      const filter: any = {};
+
+      if (keyword) {
+        filter.$or = [
+          { fullName: { $regex: keyword, $options: 'i' } },
+          { email: { $regex: keyword, $options: 'i' } },
+          { note: { $regex: keyword, $options: 'i' } },
+          {
+            externalLinks: {
+              $elemMatch: {
+                url: { $regex: keyword, $options: 'i' }
+              }
+            }
+          }
+        ];
+      }
+
+      if (emailOnly) {
+        filter.email = { $exists: true, $ne: "" };
+      }
+
+      console.log(filter)
+      const total = await Talent.countDocuments(filter);
+      const talents = await Talent.find(filter).skip((page - 1) * limit).limit(limit);
 
       res.json({ talents, total });
     } catch (error) {
@@ -199,10 +225,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email sending route
-  app.post('/api/talents/:id/send-email', isAuthenticated, async (req, res) => {
+  app.post('/api/talents/:talentId/send-email', isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const talent = await storage.getTalent(id);
+      const talentId = req.params.talentId;
+      const talent = await Talent.findOne({ talentId });
       if (!talent) {
         return res.status(404).json({ message: "Talent not found" });
       }
@@ -211,30 +237,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Talent has no email address" });
       }
 
-      const settings = await storage.getSettings();
-      if (!settings || !settings.smtpHost || !settings.smtpUsername || !settings.smtpPassword) {
+      const smtp = await Setting.findOne({ name: 'smtp' });
+      const template = await Setting.findOne({ name: 'template' });
+
+      if (!smtp?.value || !smtp.value.smtpHost || !smtp.value.smtpUsername || !smtp.value.smtpPassword) {
         return res.status(400).json({ message: "SMTP settings not configured" });
       }
 
       // Create nodemailer transporter
       const transporter = nodemailer.createTransport({
-        host: settings.smtpHost,
-        port: parseInt(settings.smtpPort || "587"),
-        secure: settings.smtpSecure || false,
+        service: "gmail",
+        secure: smtp.value.smtpSecure || false,
         auth: {
-          user: settings.smtpUsername,
-          pass: settings.smtpPassword,
+          user: smtp.value.smtpUsername,
+          pass: smtp.value.smtpPassword,
         },
       });
 
       // Replace template variables
-      const subject = (settings.emailSubject || "Hello {{name}}").replace(/\{\{name\}\}/g, talent.fullName);
-      const text = (settings.emailTemplate || "Dear {{name}},\n\nBest regards").replace(/\{\{name\}\}/g, talent.fullName);
+      const subject = (template?.value.emailSubject || "Hello {{name}}").replace(/\{\{name\}\}/g, talent.fullName);
+      const text = (template?.value.emailTemplate || "Dear {{name}},\n\nBest regards").replace(/\{\{name\}\}/g, talent.fullName);
 
       // Send email
       await transporter.sendMail({
-        from: `${settings.fromName || "Talent Management"} <${settings.fromEmail || settings.smtpUsername}>`,
-        to: talent.email,
+        from: `${template?.value.fromName || "Talent Management"} <${template?.value.fromEmail || smtp?.value.smtpUsername}>`,
+        to: 'tech.zohan.khan@gmail.com',
         subject,
         text,
       });
@@ -249,8 +276,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings routes
   app.get('/api/settings', isAuthenticated, async (req, res) => {
     try {
-      const settings = await storage.getSettings();
-      res.json(settings || {});
+      const smtp = await Setting.findOne({ name: 'smtp' });
+      const template = await Setting.findOne({ name: 'template' });
+      res.json({ ...smtp?.value, ...template?.value });
     } catch (error) {
       console.error("Error fetching settings:", error);
       res.status(500).json({ message: "Failed to fetch settings" });
@@ -259,9 +287,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/settings', isAuthenticated, async (req, res) => {
     try {
-      const settingsData = insertSettingsSchema.parse(req.body);
-      const settings = await storage.upsertSettings(settingsData);
-      res.json(settings);
+      const { emailSubject, emailTemplate, fromEmail, fromName, smtpHost, smtpPassword, smtpPort, smtpSecure, smtpUsername } = req.body;
+      const smtp = await Setting.findOne({ name: 'smtp' });
+      const template = await Setting.findOne({ name: 'template' });
+
+      if (!smtp) {
+        await Setting.create({ name: 'smtp', value: {} });
+      }
+
+      if (!template) {
+        await Setting.create({ name: 'template', value: {} });
+      }
+
+      const smtpModel = await Setting.findOneAndUpdate({ name: 'smtp' }, {
+        name: 'smtp', value: { smtpHost, smtpPassword, smtpPort, smtpSecure, smtpUsername }
+      });
+
+      const templateModel = await Setting.findOneAndUpdate({ name: 'template' }, { name: 'template', value: { emailSubject, emailTemplate, fromEmail, fromName } });
+
+      res.json({ smtpModel, templateModel });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid settings data", errors: error.errors });

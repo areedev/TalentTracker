@@ -53,7 +53,7 @@ export default function TalentCard({ talent }: TalentCardProps) {
 
   const sendEmailMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", `/api/talents/${talent.id}/send-email`);
+      await apiRequest("POST", `/api/talents/${talent.talentId}/send-email`);
     },
     onSuccess: () => {
       toast({

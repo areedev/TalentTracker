@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +61,7 @@ export default function Settings() {
   };
 
   // Update form when settings data loads
-  useState(() => {
+  useEffect(() => {
     if (settings) {
       form.reset({
         smtpHost: settings.smtpHost || "",
@@ -75,7 +75,7 @@ export default function Settings() {
         fromEmail: settings.fromEmail || "",
       });
     }
-  });
+  }, [settings, form]);
 
   if (isLoading) {
     return (
