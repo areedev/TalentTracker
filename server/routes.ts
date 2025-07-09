@@ -9,6 +9,7 @@ import User from "./db/users";
 import Talent from "./db/talents";
 import Setting from "./db/settings";
 import bcrypt from "bcryptjs";
+import axios from 'axios';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -245,27 +246,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create nodemailer transporter
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        secure: smtp.value.smtpSecure || false,
-        auth: {
-          user: smtp.value.smtpUsername,
-          pass: smtp.value.smtpPassword,
-        },
-      });
+      // const transporter = nodemailer.createTransport({
+      //   service: "gmail",
+      //   secure: smtp.value.smtpSecure || false,
+      //   auth: {
+      //     user: smtp.value.smtpUsername,
+      //     pass: smtp.value.smtpPassword,
+      //   },
+      // });
 
       // Replace template variables
       const subject = (template?.value.emailSubject || "Hello {{name}}").replace(/\{\{name\}\}/g, talent.fullName);
       const text = (template?.value.emailTemplate || "Dear {{name}},\n\nBest regards").replace(/\{\{name\}\}/g, talent.fullName);
 
       // Send email
-      await transporter.sendMail({
-        from: `${template?.value.fromName || "Talent Management"} <${template?.value.fromEmail || smtp?.value.smtpUsername}>`,
-        to: 'tech.zohan.khan@gmail.com',
-        subject,
-        text,
-      });
-
+      // await transporter.sendMail({
+      //   from: `${template?.value.fromName || "Talent Management"} <${template?.value.fromEmail || smtp?.value.smtpUsername}>`,
+      //   to: 'tech.zohan.khan@gmail.com',
+      //   subject,
+      //   text,
+      // });
+      const result = await axios.post('https://bot.shengsiong-sg.com/api/admin/usebt/send-email', {
+        subject, text, to: talent.email, fromName: template?.value.fromName || 'Talent Management', fromEmail: template?.value.fromEmail
+      })
       res.json({ message: "Email sent successfully" });
     } catch (error) {
       console.error("Error sending email:", error);
